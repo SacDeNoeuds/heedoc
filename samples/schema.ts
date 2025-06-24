@@ -6,18 +6,29 @@ interface Success<V> {
   _tag: "Success"
   value: V
 }
-
-export const success = <T>(value: T): Success<T> => ({ _tag: "Success", value })
-export const failure = <E>(error: E): Failure<E> => ({ _tag: "Failure", error })
-
 type Result<Err, Value> = Failure<Err> | Success<Value>
+
+/**
+ * Helps creating success {@link Result}
+ * @see {@link Result}
+ */
+const success = <T>(value: T): Success<T> => ({ _tag: "Success", value })
+
+/**
+ * @summary generates an error
+ */
+const failure = <E>(error: E): Failure<E> => ({ _tag: "Failure", error })
+
 
 interface SchemaError {
   schemaName: string
   reason: string
 }
 
-export interface Schema<T> {
+interface Schema<T> {
+  /**
+   * The schema's name, useful for error messages
+   */
   name: string
   parse: (input: unknown) => Result<SchemaError, T>
 }
@@ -48,3 +59,6 @@ export const string: Schema<string> = {
       : failure({ schemaName: "string", reason: "not a string" })
   },
 }
+
+export { failure, success, type Schema, type SchemaError }
+
