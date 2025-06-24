@@ -1,0 +1,26 @@
+{
+  "name": "tsdoc-generator",
+  "version": "0.1.0",
+  "description": "TSDoc Generator",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [
+    "TSDoc",
+    "generator"
+  ],
+  "author": "sacdenoeuds.dev@gmail.com",
+  "license": "MIT",
+  "peerDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@microsoft/tsdoc": "^0.15.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "vitest": "^3.2.4"
+  }
+}
