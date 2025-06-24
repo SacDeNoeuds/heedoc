@@ -2,13 +2,15 @@ import * as tsdoc from "@microsoft/tsdoc"
 import path from 'node:path'
 import * as ts from 'typescript'
 
-export interface FileDocumentation {
+export interface FileExportDocumentation {
   examples?: Array<{ title?: string; code: string }>
   remarks?: string
   summary?: string
   description?: string
   signature: unknown
 }
+type ExportName = string
+export type FileDocumentation = Record<ExportName, FileExportDocumentation>
 
 type FilePath = string
 type FileExports = "all exports" | string[]
@@ -25,6 +27,6 @@ export async function parseDocumentation(
   return acc;
 }
 
-function parseFileDocumentation(filePath: FilePath, exports: FileExports): Promise<FileDocumentation> {
+async function parseFileDocumentation(filePath: FilePath, exports: FileExports): Promise<FileDocumentation> {
   throw new Error("unimplemented", { cause: { tsdoc, ts } })
 }

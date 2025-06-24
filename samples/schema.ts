@@ -24,13 +24,13 @@ export interface Schema<T> {
 
 /**
  * A simple schema for strings.
- * @example success
+ * @example
  * ```ts
  * import { string, success } from './schema'
  *
  * assert.equal(string.parse('hello'), success('hello'))
  * ```
- * @example failure
+ * @example Failure
  * ```ts
  * import { string, success } from './schema'
  *
