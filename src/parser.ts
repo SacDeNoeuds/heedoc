@@ -1,19 +1,19 @@
 import path from "node:path"
-import { ExportedDeclarations, JSDoc, Project } from "ts-morph"
+import { ExportedDeclarations, JSDoc, Project, ts } from "ts-morph"
 
 export interface FileExportDocumentation {
   examples?: Array<{ title?: string; code: string }>
   remarks?: string
   summary?: string
   description?: string
-  signature?: string
+  type?: string
   category?: string
 }
 type ExportName = string
 export type FileDocumentation = Record<ExportName, FileExportDocumentation>
 
 type FilePath = string
-type FileExports = "all exports" | string[]
+export type FileExports = "all exports" | string[]
 
 export async function parseDocumentation(
   filesToParse: Record<FilePath, FileExports>,
@@ -44,6 +44,7 @@ async function parseFileDocumentation(
 }
 
 function getJsDocsUntilParent(node: ExportedDeclarations, maxAncestors: number): JSDoc[] {
+  // NOTE: the type is incorrect but the function works fine. No need to dig further.
   let current: ExportedDeclarations | undefined = node;
   while (current && maxAncestors) {
     if ('getJsDocs' in current) return current.getJsDocs();
@@ -52,36 +53,35 @@ function getJsDocsUntilParent(node: ExportedDeclarations, maxAncestors: number):
   }
   return []
 }
+
+function getDeclarationType(declaration: ExportedDeclarations) {
+  const typeAsText = declaration.getType().getText(declaration, ts.TypeFormatFlags.NoTruncation)
+  return typeAsText.startsWith('typeof ') ? undefined : typeAsText
+}
+
 function parseDeclarationDocumentation(declaration: ExportedDeclarations): FileExportDocumentation {
-  // ClassDeclaration | InterfaceDeclaration | EnumDeclaration | FunctionDeclaration | VariableDeclaration | TypeAliasDeclaration | Expression | SourceFile
   const [jsDoc] = getJsDocsUntilParent(declaration, 3)
   const acc: FileExportDocumentation = {
     description: jsDoc?.getDescription().trim() || undefined,
-    signature: declaration.getType().getText(),
+    type: getDeclarationType(declaration),
   }
   if (!jsDoc) return acc;
   jsDoc.getTags().forEach((tag) => {
-    console.debug('tag name', tag.getTagName())
     switch (tag.getTagName()) {
       case 'example':
         const text = tag.getCommentText()!.trim()
         acc.examples ||= [];
-        acc.examples?.push({
+        return acc.examples?.push({
           title: text.slice(0, text.indexOf('```')).trim() || undefined,
           code: text.slice(text.indexOf('```')),
         })
-        break;
       case 'remarks':
-        acc.remarks = tag.getCommentText()?.trim()
-        break;
+        return acc.remarks = tag.getCommentText()?.trim()
       case 'summary':
-        acc.summary = tag.getCommentText()?.trim()
-        break;
+        return acc.summary = tag.getCommentText()?.trim()
       case 'category':
-        acc.category = tag.getCommentText()?.trim()
-        break;
+        return acc.category = tag.getCommentText()?.trim()
     }
-    return acc;
   });
   return acc
 }

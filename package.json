@@ -2,9 +2,19 @@
   "name": "tsdoc-generator",
   "version": "0.1.0",
   "description": "TSDoc Generator",
-  "main": "dist/main.js",
+  "main": "dist/parser.js",
   "type": "module",
+  "bin": {
+    "gen-reference-md": "./dist/bin/gen-reference-md.js"
+  },
+  "files": [
+    "dist/*.js"
+  ],
   "scripts": {
+    "prebuild": "rm -rf ./dist",
+    "build": "tsc",
+    "postbuild": "chmod +x ./dist/bin/*",
+    "prepack": "npm run build",
     "test": "vitest"
   },
   "keywords": [
@@ -18,6 +28,7 @@
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1",
+    "cac": "^6.7.14",
     "ts-morph": "^26.0.0"
   },
   "devDependencies": {
