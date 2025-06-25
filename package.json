@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Render documentation files (markdown, HTML, whatever) from JSDoc comments with custom renderers",
   "main": "dist/main.js",
+  "types": "dist/main.d.ts",
   "type": "module",
   "bin": {
     "markdown-reference": "./dist/bin/markdown-reference.js"

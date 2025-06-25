@@ -13,7 +13,7 @@ type ExportName = string
 export type FileDocumentation = Record<ExportName, FileExportDocumentation>
 
 type FilePath = string
-export type FileExports = "all exports" | string[]
+export type FileExports = "all exports" | { type: 'omit' | 'pick', exports: string[] }
 
 export async function parseDocumentation(
   filesToParse: Record<FilePath, FileExports>,
@@ -37,10 +37,16 @@ async function parseFileDocumentation(
   const sourceFile = project.getSourceFileOrThrow(filePath)
   const fileDoc: FileDocumentation = {}
   for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
-    if (exports !== 'all exports' && !exports.includes(name)) continue;
+    if (!isExportToDocument(name, exports)) continue;
     fileDoc[name] = parseDeclarationDocumentation(declarations[0]!)
   }
   return fileDoc
+}
+function isExportToDocument(name: string, exportsToDoc: FileExports) {
+  if (exportsToDoc === 'all exports') return true;
+  return exportsToDoc.type === 'omit'
+    ? !exportsToDoc.exports.includes(name)
+    : exportsToDoc.exports.includes(name);
 }
 
 function getJsDocsUntilParent(node: ExportedDeclarations, maxAncestors: number): JSDoc[] {
