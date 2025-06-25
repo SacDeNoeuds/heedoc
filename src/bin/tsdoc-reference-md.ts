@@ -3,8 +3,8 @@ import { cac } from "cac"
 import { readFileSync } from "node:fs"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
-import { GenerateOptions } from '../generate-documentation.js'
-import { generateReferenceMarkdown } from "../generate-reference-markdown.js"
+import { TSDocumentItOptions } from '../tsdocument-it.js'
+import { tsdocumentReferenceMarkdown } from "../tsdocument-reference-md.js"
 
 const currentFilePath = fileURLToPath(import.meta.url)
 const packageJsonPath = path.resolve(
@@ -13,7 +13,7 @@ const packageJsonPath = path.resolve(
 )
 const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"))
 
-const cli = cac("gen-reference-md")
+const cli = cac("tsdoc-reference-md")
 
 cli
   .version(pkg.version)
@@ -63,14 +63,14 @@ cli
     // `pickExports` can be empty string
     const exportsToPick: string[] = pickExports ? pickExports.split(',').filter(Boolean) : undefined
     
-    const entryPoints: GenerateOptions['entryPoints'] = Object.assign(
+    const entryPoints: TSDocumentItOptions['entryPoints'] = Object.assign(
       {},
       ...entryPointsFromOptions.map((entryPoint) => ({
         [entryPoint]: exportsToPick ?? ("all exports" as const),
       })),
     )
     try {
-      const markdown = await generateReferenceMarkdown({
+      const markdown = await tsdocumentReferenceMarkdown({
         entryPoints,
         // @ts-expect-error it will be supported soon.
         watch,

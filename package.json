@@ -1,11 +1,11 @@
 {
-  "name": "tsdoc-generator",
+  "name": "tsdoc-doc",
   "version": "0.1.0",
-  "description": "TSDoc Generator",
-  "main": "dist/parser.js",
+  "description": "TSDoc Documenter",
+  "main": "dist/main.js",
   "type": "module",
   "bin": {
-    "gen-reference-md": "./dist/bin/gen-reference-md.js"
+    "tsdoc-reference-md": "./dist/bin/tsdoc-reference-md.js"
   },
   "files": [
     "dist/*.js"

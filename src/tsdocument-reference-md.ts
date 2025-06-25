@@ -1,8 +1,8 @@
-import { GenerateDocumentation } from './generate-documentation.js'
 import { parseDocumentation } from './parser.js'
+import { TSDocumentIt } from './tsdocument-it.js'
 
 type Markdown = string
-type GenerateReferenceMarkdown = GenerateDocumentation<Markdown, {
+type TSDocumentReferenceMarkdown = TSDocumentIt<Markdown, {
   /**
    * When a JSDoc includes a `{@\link otherStuff}`, this function lets you define how to resolve the link path to `otherStuff`
    * @example
@@ -25,7 +25,7 @@ type GenerateReferenceMarkdown = GenerateDocumentation<Markdown, {
   resolveLinkPath?: (referencedName: string) => string | undefined;
 }>
 
-export const generateReferenceMarkdown: GenerateReferenceMarkdown = async ({ entryPoints }) => {
+export const tsdocumentReferenceMarkdown: TSDocumentReferenceMarkdown = async ({ entryPoints }) => {
   const report = await parseDocumentation(entryPoints)
   const body = Object.values(report).flatMap((fileExports) => {
     return Object.entries(fileExports).sort(([a], [b]) => a.localeCompare(b)).map(([exportName, doc]) => {
