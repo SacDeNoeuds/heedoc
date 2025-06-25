@@ -1,11 +1,11 @@
 {
-  "name": "tsdoc-doc",
+  "name": "heedoc",
   "version": "0.1.0",
-  "description": "TSDoc Documenter",
+  "description": "Render documentation files (markdown, HTML, whatever) from JSDoc comments with custom renderers",
   "main": "dist/main.js",
   "type": "module",
   "bin": {
-    "tsdoc-reference-md": "./dist/bin/tsdoc-reference-md.js"
+    "markdown-reference": "./dist/bin/markdown-reference.js"
   },
   "files": [
     "dist/*.js"
@@ -19,7 +19,9 @@
   },
   "keywords": [
     "TSDoc",
-    "generator"
+    "JSDoc",
+    "renderer",
+    "documentation"
   ],
   "author": "sacdenoeuds.dev@gmail.com",
   "license": "MIT",
@@ -27,7 +29,6 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@microsoft/tsdoc": "^0.15.1",
     "cac": "^6.7.14",
     "ts-morph": "^26.0.0"
   },

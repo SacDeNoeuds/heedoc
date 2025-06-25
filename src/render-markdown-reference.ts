@@ -1,8 +1,8 @@
 import { parseDocumentation } from './parser.js'
-import { TSDocumentIt } from './tsdocument-it.js'
+import { RenderDocumentation } from './render-documentation.js'
 
 type Markdown = string
-type TSDocumentReferenceMarkdown = TSDocumentIt<Markdown, {
+export type RenderMarkdownReference = RenderDocumentation<Markdown, {
   /**
    * When a JSDoc includes a `{@\link otherStuff}`, this function lets you define how to resolve the link path to `otherStuff`
    * @example
@@ -25,7 +25,7 @@ type TSDocumentReferenceMarkdown = TSDocumentIt<Markdown, {
   resolveLinkPath?: (referencedName: string) => string | undefined;
 }>
 
-export const tsdocumentReferenceMarkdown: TSDocumentReferenceMarkdown = async ({ entryPoints }) => {
+export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPoints }) => {
   const report = await parseDocumentation(entryPoints)
   const body = Object.values(report).flatMap((fileExports) => {
     return Object.entries(fileExports).sort(([a], [b]) => a.localeCompare(b)).map(([exportName, doc]) => {

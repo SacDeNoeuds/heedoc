@@ -3,8 +3,8 @@ import { cac } from "cac"
 import { readFileSync } from "node:fs"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
-import { TSDocumentItOptions } from '../tsdocument-it.js'
-import { tsdocumentReferenceMarkdown } from "../tsdocument-reference-md.js"
+import { TSDocumentItOptions } from '../render-documentation.js'
+import { renderMarkdownReference } from "../render-markdown-reference.js"
 
 const currentFilePath = fileURLToPath(import.meta.url)
 const packageJsonPath = path.resolve(
@@ -13,7 +13,7 @@ const packageJsonPath = path.resolve(
 )
 const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"))
 
-const cli = cac("tsdoc-reference-md")
+const cli = cac("markdown-reference")
 
 cli
   .version(pkg.version)
@@ -70,7 +70,7 @@ cli
       })),
     )
     try {
-      const markdown = await tsdocumentReferenceMarkdown({
+      const markdown = await renderMarkdownReference({
         entryPoints,
         // @ts-expect-error it will be supported soon.
         watch,
