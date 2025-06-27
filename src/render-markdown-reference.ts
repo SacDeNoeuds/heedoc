@@ -5,6 +5,7 @@ import {
   type FileDocumentation,
   type FileExportDocumentation,
 } from "./parser.js"
+import { prettify } from './prettify.js'
 import type { RenderDocumentation, RenderDocumentationOptions } from "./render-documentation.js"
 
 export type RenderMarkdownReferenceOptions = {
@@ -46,7 +47,7 @@ export const renderMarkdownReference: RenderMarkdownReference = async ({
   const report = await parseDocumentation(entryPoints)
   const markdown = markdownReferenceRenderer(report, { propertiesToOmit, mainHeading, startHeadingLevel })
   const outFile = path.resolve(process.cwd(), output)
-  await fs.writeFile(outFile, markdown, "utf-8")
+  await fs.writeFile(outFile, await prettify(markdown), "utf-8")
 }
 
 type Options = Required<RenderMarkdownReferenceOptions & Pick<RenderDocumentationOptions, 'propertiesToOmit'>>
