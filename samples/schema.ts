@@ -26,9 +26,6 @@ interface SchemaError {
 }
 
 interface Schema<T> {
-  /**
-   * The schema's name, useful for error messages
-   */
   name: string
   parse: (input: unknown) => Result<SchemaError, T>
 }

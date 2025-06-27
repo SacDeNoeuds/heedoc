@@ -18,7 +18,7 @@ string.parse(42),
 failure({ schemaName: "string", reason: "not a string" }),
 )
 `.trim()
-const wrapInTicks = (code: string) => "```ts" + "\n" + code + "\n" + "```"
+const wrapCodeInTicks = (code: string) => "```ts" + "\n" + code + "\n" + "```"
 
 describe(parseDocumentation.name, () => {
   const expectedSuccessData = {
@@ -33,8 +33,8 @@ describe(parseDocumentation.name, () => {
     description: "A simple schema for strings.",
     type: expect.any(String),
     examples: [
-      { code: wrapInTicks(stringSuccessExample) },
-      { title: "Failure", code: wrapInTicks(stringFailureExample) },
+      { code: wrapCodeInTicks(stringSuccessExample) },
+      { title: "Failure", code: wrapCodeInTicks(stringFailureExample) },
     ],
   } as const
 
