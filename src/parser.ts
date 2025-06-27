@@ -6,8 +6,11 @@ import {
   Node,
   Project,
   PropertySignature,
+  SyntaxKind,
   ts,
-  Type
+  Type,
+  TypeAliasDeclaration,
+  TypeNode,
 } from "ts-morph"
 
 export interface FileExportDocumentation {
@@ -62,13 +65,10 @@ function isExportToDocument(name: string, exportsToDoc: FileExports) {
 }
 
 function isJSDocableNode(node: Record<string, any>): node is JSDocableNode {
-  return 'getJsDocs' in node;
+  return "getJsDocs" in node
 }
 
-function getJsDocsUntilParent(
-  node: Node,
-  maxAncestors: number,
-): JSDoc[] {
+function getJsDocsUntilParent(node: Node, maxAncestors: number): JSDoc[] {
   // NOTE: the type is incorrect but the function works fine. No need to dig further.
   let current: Node | undefined = node
   while (current && maxAncestors) {
@@ -79,9 +79,53 @@ function getJsDocsUntilParent(
   return []
 }
 
+function resolveConditionTypeNodes(
+  typeNode: TypeNode,
+  acc: TypeNode[] = [],
+): TypeNode[] {
+  const conditionalType = typeNode.asKind(SyntaxKind.ConditionalType)
+  const conditionalTypes = conditionalType
+    ? [conditionalType]
+    : typeNode.getChildrenOfKind(SyntaxKind.ConditionalType)
+
+  if (!conditionalTypes.length) {
+    console.debug("non conditional-type", typeNode.getType().getText())
+    return [...acc, typeNode]
+  }
+
+  return [
+    ...acc,
+    ...conditionalTypes.flatMap((conditionalType) => {
+      const trueType = conditionalType.getTrueType()
+      console.debug(
+        "true type:",
+        trueType.getType().getText(),
+        trueType.getKindName(),
+      )
+      const falseType = conditionalType.getFalseType()
+      console.debug(
+        "false type:",
+        falseType.getType().getText(),
+        falseType.getKindName(),
+      )
+      return [
+        ...resolveConditionTypeNodes(trueType),
+        ...resolveConditionTypeNodes(falseType),
+      ]
+    }),
+  ]
+}
+
 function getJsDocsOfChildren(
   node: ExportedDeclarations,
 ): Record<string, FileExportDocumentation> | undefined {
+  if (node instanceof TypeAliasDeclaration) {
+    const allTypeNodes = resolveConditionTypeNodes(node.getTypeNodeOrThrow())
+    // console.debug("so?", allTypeNodes.map((node) => node.getText()))
+    return allTypeNodes.reduce((acc, typeNode) => {
+      return extractTypeJsDocs(typeNode.getType(), acc)
+    }, undefined as Record<string, FileExportDocumentation> | undefined)
+  }
   return extractTypeJsDocs(node.getType())
 }
 
@@ -103,17 +147,17 @@ function extractTypeJsDocs(
     return typeOfValue ? extractTypeJsDocs(typeOfValue, acc) : acc
   }
 
-  // Handle object types (excluding functions, etc.)
-  if (!type.isObject())
-    return undefined
-
   for (const prop of type.getProperties()) {
     const declarations = prop.getDeclarations()
     const [decl] = declarations
     if (!decl) continue
     if (!(decl instanceof PropertySignature)) {
       const [jsDoc] = getJsDocsUntilParent(decl, 3)
-      if (jsDoc) acc = { ...acc, [prop.getName()]: jsDocToFileExportDocumentation(jsDoc) }
+      if (jsDoc)
+        acc = {
+          ...acc,
+          [prop.getName()]: jsDocToFileExportDocumentation(jsDoc),
+        }
       continue
     }
     const propSignature = decl
@@ -127,7 +171,7 @@ function extractTypeJsDocs(
         [prop.getName()]: {
           ...(jsDoc && jsDocToFileExportDocumentation(jsDoc)),
           properties: extractTypeJsDocs(propSignature.getType()),
-        }
+        },
       }
     }
   }
