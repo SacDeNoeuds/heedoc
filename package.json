@@ -9,7 +9,7 @@
     "markdown-reference": "./dist/bin/markdown-reference.js"
   },
   "files": [
-    "dist/*.js"
+    "dist/*"
   ],
   "scripts": {
     "prebuild": "rm -rf ./dist",

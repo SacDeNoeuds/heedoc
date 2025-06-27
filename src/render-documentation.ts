@@ -1,6 +1,7 @@
-import { FileExports } from './parser.js'
+import type { FileExports } from './parser.js'
 
-export type TSDocumentItOptions = {
+export type RenderDocumentationOptions = {
   entryPoints: Record<string, FileExports>;
+  output: string
 }
-export type RenderDocumentation<Output, CustomOptions = {}> = (options: TSDocumentItOptions & CustomOptions) => Promise<Output>
+export type RenderDocumentation<CustomOptions = {}> = (options: RenderDocumentationOptions & CustomOptions) => Promise<void>

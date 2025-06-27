@@ -1,5 +1,5 @@
 import path from "node:path"
-import { ExportedDeclarations, JSDoc, Project, ts } from "ts-morph"
+import { type ExportedDeclarations, JSDoc, Project, ts } from "ts-morph"
 
 export interface FileExportDocumentation {
   examples?: Array<{ title?: string; code: string }>

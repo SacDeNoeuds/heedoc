@@ -1,8 +1,9 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import { parseDocumentation } from './parser.js'
-import { RenderDocumentation } from './render-documentation.js'
+import type { RenderDocumentation } from './render-documentation.js'
 
-type Markdown = string
-export type RenderMarkdownReference = RenderDocumentation<Markdown, {
+export type RenderMarkdownReference = RenderDocumentation<{
   /**
    * When a JSDoc includes a `{@\link otherStuff}`, this function lets you define how to resolve the link path to `otherStuff`
    * @example
@@ -25,7 +26,7 @@ export type RenderMarkdownReference = RenderDocumentation<Markdown, {
   resolveLinkPath?: (referencedName: string) => string | undefined;
 }>
 
-export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPoints }) => {
+export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPoints, output }) => {
   const report = await parseDocumentation(entryPoints)
   const body = Object.values(report).flatMap((fileExports) => {
     return Object.entries(fileExports).sort(([a], [b]) => a.localeCompare(b)).map(([exportName, doc]) => {
@@ -41,5 +42,8 @@ export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPo
       ].filter(Boolean).join('\n\n')
     })
   }).join('\n\n')
-  return `# Reference\n\n${body}`
+  const markdown = `# Reference\n\n${body}`
+
+  const outFile = path.resolve(process.cwd(), output)
+  await fs.writeFile(outFile, markdown, 'utf-8');
 }

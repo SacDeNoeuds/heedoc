@@ -3,7 +3,8 @@ import { cac } from "cac"
 import { readFileSync } from "node:fs"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
-import { TSDocumentItOptions } from '../render-documentation.js'
+import type { FileExports } from "../parser.js"
+import type { RenderDocumentationOptions } from "../render-documentation.js"
 import { renderMarkdownReference } from "../render-markdown-reference.js"
 
 const currentFilePath = fileURLToPath(import.meta.url)
@@ -17,11 +18,8 @@ const cli = cac("markdown-reference")
 
 cli
   .version(pkg.version)
-  .command(
-    '[output file]',
-    "Generate markdown reference from JSDoc",
-  )
-  .usage("./reference.md --entry src/main.js,src/other.js")
+  .command("[output file]", "Generate markdown reference from JSDoc")
+  .usage("./reference.md --entry src/main.ts,src/other.js")
   .option(
     "--entry [name]",
     "Comma-separated list of entry points to generate references for",
@@ -61,30 +59,31 @@ cli
     }
     console.debug(`Generating the reference file ${output}`)
     // `pickExports` can be empty string
-    const exportsToPick: string[] = pickExports ? pickExports.split(',').filter(Boolean) : undefined
-    
-    const entryPoints: TSDocumentItOptions['entryPoints'] = Object.assign(
-      {},
-      ...entryPointsFromOptions.map((entryPoint) => ({
-        [entryPoint]: exportsToPick ?? ("all exports" as const),
-      })),
-    )
+    const exportsToPick: string[] = pickExports
+      ? pickExports.split(",").filter(Boolean)
+      : undefined
+    const exportsToOmit: string[] = omitExports
+      ? omitExports.split(",").filter(Boolean)
+      : undefined
+
+    const fileExports: FileExports = exportsToPick
+      ? { type: "pick", exports: exportsToPick }
+      : exportsToOmit
+      ? { type: "omit", exports: exportsToOmit }
+      : "all exports"
+
+    const entryPoints: RenderDocumentationOptions["entryPoints"] =
+      Object.assign(
+        {},
+        ...entryPointsFromOptions.map((entryPoint) => ({
+          [entryPoint]: fileExports,
+        })),
+      )
     try {
       const markdown = await renderMarkdownReference({
         entryPoints,
         // @ts-expect-error it will be supported soon.
         watch,
-        omitExports,
-        // entryPoints: Object.assign(
-        //   {},
-        //   ...entryPoints.map((entryPoint) => ({
-        //     [entryPoint]: {
-        //       exportsToPick: pickExports,
-        //       exportsToOmit: omitExports,
-        //     },
-        //   })),
-        // ),
-        // watch,
       })
       console.log(markdown)
     } catch (error) {
