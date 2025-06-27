@@ -18,6 +18,7 @@ describe(markdownReferenceRenderer.name, () => {
         mainHeading: "Reference",
         propertiesToOmit: new Set(),
         startHeadingLevel: 2,
+        renames: {},
         ...options,
       },
     )

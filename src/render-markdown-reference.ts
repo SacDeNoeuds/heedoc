@@ -42,15 +42,16 @@ export const renderMarkdownReference: RenderMarkdownReference = async ({
   output,
   mainHeading = '',
   startHeadingLevel = 2,
+  renames = {},
   propertiesToOmit = new Set(),
 }) => {
   const report = await parseDocumentation(entryPoints)
-  const markdown = markdownReferenceRenderer(report, { propertiesToOmit, mainHeading, startHeadingLevel })
+  const markdown = markdownReferenceRenderer(report, { propertiesToOmit, mainHeading, startHeadingLevel, renames })
   const outFile = path.resolve(process.cwd(), output)
   await fs.writeFile(outFile, await prettify(markdown), "utf-8")
 }
 
-type Options = Required<RenderMarkdownReferenceOptions & Pick<RenderDocumentationOptions, 'propertiesToOmit'>>
+type Options = Required<RenderMarkdownReferenceOptions & Pick<RenderDocumentationOptions, 'propertiesToOmit' | 'renames'>>
 
 export function markdownReferenceRenderer(
   report: Record<string, FileDocumentation>,
@@ -59,10 +60,9 @@ export function markdownReferenceRenderer(
   const body = Object.values(report)
     .flatMap((fileExports) => {
       return Object.entries(fileExports)
+        .map(([name, doc]) => [options.renames[name] ?? name, doc] as const)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([exportName, doc]) => {
-          return renderExport(exportName, doc, options)
-        })
+        .map(([exportName, doc]) => renderExport(exportName, doc, options))
     })
     .join("\n\n")
     .trim()
@@ -95,9 +95,11 @@ function renderExport(
   ].filter(Boolean)
 
   if (!content.length) return ""
-  const propertiesContent = Object.entries(doc?.properties ?? {}).flatMap(
+  const propertiesContent = Object.entries(doc?.properties ?? {})
+    .filter(([propName]) => !options.propertiesToOmit.has(propName))
+    .map(([propName, doc]) => [options.renames[propName] ?? propName, doc] as const)
+    .sort(([a], [b]) => a.localeCompare(b)).flatMap(
     ([propName, doc]) => {
-      if (options.propertiesToOmit.has(propName)) return []
       const nestedExportName = `${exportName}.${propName}`
       return [renderExport(nestedExportName, doc, options, level + 1)]
     },
