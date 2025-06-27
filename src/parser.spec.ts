@@ -5,6 +5,7 @@ import { parseDocumentation } from "./parser.js"
 const barrelFilePath = path.resolve(process.cwd(), "./samples/barrel.ts")
 const sourceFilePath = path.resolve(process.cwd(), "./samples/schema.ts")
 const interfaceFilePath = path.resolve(process.cwd(), "./samples/interface.ts")
+const fnFilePath = path.resolve(process.cwd(), "./samples/fn.ts")
 
 const stringSuccessExample = `
 import { string, success } from './schema'
@@ -116,6 +117,23 @@ describe(parseDocumentation.name, () => {
             superTest: {
               description: 'One can document methods too',
             },
+          }
+        }
+      }
+    })
+  })
+
+  it('parses a function with an assigned property', async () => {
+    const result = await parseDocumentation({
+      [fnFilePath]: 'all exports',
+    })
+    expect(result).toEqual({
+      'samples/fn.ts': {
+        myFn: {
+          properties: {
+            maxLength: {
+              description: 'Some doc on the test.maxLength',
+            }
           }
         }
       }
