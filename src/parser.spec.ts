@@ -4,6 +4,7 @@ import { parseDocumentation } from "./parser.js"
 
 const barrelFilePath = path.resolve(process.cwd(), "./samples/barrel.ts")
 const sourceFilePath = path.resolve(process.cwd(), "./samples/schema.ts")
+const interfaceFilePath = path.resolve(process.cwd(), "./samples/interface.ts")
 
 const stringSuccessExample = `
 import { string, success } from './schema'
@@ -88,6 +89,36 @@ describe(parseDocumentation.name, () => {
     })
     expect(result).toEqual({
       "samples/barrel.ts": { string: expectedStringData },
+    })
+  })
+
+  it.each([
+    ['an interface', 'SchemaError1'],
+    ['a type', 'SchemaError1'],
+  ])('parses properties of %s', async (_, exportName) => {
+    const result = await parseDocumentation({
+      [interfaceFilePath]: { type: 'pick', exports: [exportName] },
+    })
+    expect(result).toEqual({
+      'samples/interface.ts': {
+        [exportName]: {
+          type: exportName,
+          properties: {
+            reasons: {
+              description: 'A detailed explanation of the encountered error',
+              summary: 'The reason why the parsing failed.',
+              properties: {
+                code: {
+                  description: 'Error CODE',
+                },
+              }
+            },
+            superTest: {
+              description: 'One can document methods too',
+            },
+          }
+        }
+      }
     })
   })
 })
