@@ -22,6 +22,7 @@ describe(markdownReferenceRenderer.name, () => {
       },
     )
   }
+
   it("renders a fully documented variable", () => {
     const doc: FileDocumentation = {
       array: {
@@ -138,6 +139,29 @@ Does what it does
 
 Time after which we stop searching for love
       `.trim(),
+    )
+  })
+
+  it('renders a doc starting at level 1', () => {
+    const doc: FileDocumentation = {
+      fetchLove: {
+        description: "Does what it does",
+        properties: {
+          timeout: {
+            description: "Time after which we stop searching for love",
+          },
+        },
+      },
+    }
+    expect(render(doc, { mainHeading: undefined, startHeadingLevel: 1 })).toBe(
+      `# \`fetchLove\`
+
+Does what it does
+
+## \`fetchLove.timeout\`
+
+Time after which we stop searching for love
+      `.trim()
     )
   })
 })

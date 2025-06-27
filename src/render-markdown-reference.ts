@@ -69,7 +69,10 @@ export function markdownReferenceRenderer(
     throw new Error(
       "No reference to generate, please check that your code has JSDoc",
     )
-  const markdown = `# Reference\n\n${body}`
+  const markdown = [
+    options.mainHeading && `# ${options.mainHeading}`,
+    body,
+  ].filter(Boolean).join('\n\n')
   return markdown
 }
 
@@ -98,6 +101,7 @@ function renderExport(
       return [renderExport(nestedExportName, doc, options, level + 1)]
     },
   )
-  const heading = `##${"#".repeat(level - 1)} \`${exportName}\``
+  const headingLevel = level - 1 + options.startHeadingLevel;
+  const heading = `${"#".repeat(headingLevel)} \`${exportName}\``
   return [heading, ...content, ...propertiesContent].join("\n\n").trim()
 }
