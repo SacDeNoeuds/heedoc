@@ -5,10 +5,7 @@ export async function prettify(
   code: string
 ): Promise<string> {
   const prettierConfig = await resolvePrettierConfig();
-  const formatted = await prettier.format(code, {
-    parser: "typescript",
-    ...prettierConfig,
-  });
+  const formatted = await prettier.format(code, prettierConfig);
   return formatted;
 }
 
