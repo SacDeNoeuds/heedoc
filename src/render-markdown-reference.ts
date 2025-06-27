@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { parseDocumentation } from './parser.js'
+import { parseDocumentation, type FileDocumentation } from './parser.js'
 import type { RenderDocumentation } from './render-documentation.js'
 
 export type RenderMarkdownReference = RenderDocumentation<{
@@ -28,10 +28,16 @@ export type RenderMarkdownReference = RenderDocumentation<{
 
 export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPoints, output }) => {
   const report = await parseDocumentation(entryPoints)
+  const markdown = markdownReferenceRenderer(report)
+  const outFile = path.resolve(process.cwd(), output)
+  await fs.writeFile(outFile, markdown, 'utf-8');
+}
+
+export function markdownReferenceRenderer(report: Record<string, FileDocumentation>): string {
   const body = Object.values(report).flatMap((fileExports) => {
     return Object.entries(fileExports).sort(([a], [b]) => a.localeCompare(b)).map(([exportName, doc]) => {
       return [
-        `## ${exportName}`,
+        `## \`${exportName}\``,
         doc.description,
         doc.summary,
         doc.remarks && `> [!NOTE]\n> ${doc.remarks}`,
@@ -43,7 +49,5 @@ export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPo
     })
   }).join('\n\n')
   const markdown = `# Reference\n\n${body}`
-
-  const outFile = path.resolve(process.cwd(), output)
-  await fs.writeFile(outFile, markdown, 'utf-8');
+  return markdown
 }
