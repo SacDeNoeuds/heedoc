@@ -1,8 +1,27 @@
 import { describe, expect, it } from "vitest"
 import type { FileDocumentation } from "./parser.js"
-import { markdownReferenceRenderer } from "./render-markdown-reference.js"
+import type { RenderDocumentationOptions } from "./render-documentation.js"
+import {
+  markdownReferenceRenderer,
+  type RenderMarkdownReferenceOptions,
+} from "./render-markdown-reference.js"
 
 describe(markdownReferenceRenderer.name, () => {
+  const render = (
+    doc: FileDocumentation,
+    options?: RenderMarkdownReferenceOptions &
+      Pick<RenderDocumentationOptions, "propertiesToOmit">,
+  ) => {
+    return markdownReferenceRenderer(
+      { "samples/demo.ts": doc },
+      {
+        mainHeading: "Reference",
+        propertiesToOmit: new Set(),
+        startHeadingLevel: 2,
+        ...options,
+      },
+    )
+  }
   it("renders a fully documented variable", () => {
     const doc: FileDocumentation = {
       array: {
@@ -19,8 +38,7 @@ describe(markdownReferenceRenderer.name, () => {
         ],
       },
     } as const
-    const md = markdownReferenceRenderer({ "samples/demo.ts": doc })
-    expect(md).toBe(
+    expect(render(doc)).toBe(
       `# Reference
 
 ## \`array\`
@@ -55,8 +73,7 @@ console.log("Oops!")
         description: "An array of numbers",
       },
     } as const
-    const md = markdownReferenceRenderer({ "samples/demo.ts": doc })
-    expect(md).toBe(
+    expect(render(doc)).toBe(
       `# Reference
 
 ## \`array\`
@@ -76,7 +93,7 @@ Timeout for all XHR requests
         properties: { timeout: { description: "Hello" } },
       },
     }
-    expect(() => markdownReferenceRenderer({ "samples/demo.ts": doc })).toThrow(
+    expect(() => render(doc)).toThrow(
       "No reference to generate, please check that your code has JSDoc",
     )
   })
@@ -89,8 +106,7 @@ Timeout for all XHR requests
       },
     }
     const propertiesToOmit = new Set(["timeout"])
-    const md = markdownReferenceRenderer({ "samples/demo.ts": doc }, propertiesToOmit)
-    expect(md).toBe(
+    expect(render(doc, { propertiesToOmit })).toBe(
       `# Reference
 
 ## \`fetchLove\`
@@ -111,8 +127,7 @@ toto
         },
       },
     }
-    const result = markdownReferenceRenderer({ "samples/demo.ts": doc })
-    expect(result).toBe(
+    expect(render(doc)).toBe(
       `# Reference
 
 ## \`fetchLove\`

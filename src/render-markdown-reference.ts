@@ -5,52 +5,62 @@ import {
   type FileDocumentation,
   type FileExportDocumentation,
 } from "./parser.js"
-import type { RenderDocumentation } from "./render-documentation.js"
+import type { RenderDocumentation, RenderDocumentationOptions } from "./render-documentation.js"
 
-export type RenderMarkdownReference = RenderDocumentation<{
+export type RenderMarkdownReferenceOptions = {
+  // /**
+  //  * When a JSDoc includes a `{@\link otherStuff}`, this function lets you define how to resolve the link path to `otherStuff`
+  //  * @example
+  //  * ```ts
+  //  * generateReferenceMarkdown({
+  //  *  // …
+  //  *  resolveLinkPath: (referenceName) => {
+  //  *    switch (referenceName) {
+  //  *      case 'Result':
+  //  *       return '/reference#Result'
+  //  *     case 'ComplexStuff':
+  //  *       return '/advanced-usage#ComplexStuff'
+  //  *      default:
+  //  *        return undefined // unknown reference name
+  //  *    }
+  //  *  }
+  //  * })
+  //  * ```
+  //  */
+  // resolveLinkPath?: (referencedName: string) => string | undefined
+  mainHeading?: string
   /**
-   * When a JSDoc includes a `{@\link otherStuff}`, this function lets you define how to resolve the link path to `otherStuff`
-   * @example
-   * ```ts
-   * generateReferenceMarkdown({
-   *  // …
-   *  resolveLinkPath: (referenceName) => {
-   *    switch (referenceName) {
-   *      case 'Result':
-   *       return '/reference#Result'
-   *     case 'ComplexStuff':
-   *       return '/advanced-usage#ComplexStuff'
-   *      default:
-   *        return undefined // unknown reference name
-   *    }
-   *  }
-   * })
-   * ```
+   * @default {2}
    */
-  resolveLinkPath?: (referencedName: string) => string | undefined
-}>
+  startHeadingLevel?: number
+}
+export type RenderMarkdownReference = RenderDocumentation<RenderMarkdownReferenceOptions>
 
 export const renderMarkdownReference: RenderMarkdownReference = async ({
   entryPoints,
-  propertiesToOmit = new Set(),
   output,
+  mainHeading = '',
+  startHeadingLevel = 2,
+  propertiesToOmit = new Set(),
 }) => {
   const report = await parseDocumentation(entryPoints)
-  const markdown = markdownReferenceRenderer(report, propertiesToOmit)
+  const markdown = markdownReferenceRenderer(report, { propertiesToOmit, mainHeading, startHeadingLevel })
   const outFile = path.resolve(process.cwd(), output)
   await fs.writeFile(outFile, markdown, "utf-8")
 }
 
+type Options = Required<RenderMarkdownReferenceOptions & Pick<RenderDocumentationOptions, 'propertiesToOmit'>>
+
 export function markdownReferenceRenderer(
   report: Record<string, FileDocumentation>,
-  propertiesToOmit = new Set<string>(),
+  options: Options,
 ): string {
   const body = Object.values(report)
     .flatMap((fileExports) => {
       return Object.entries(fileExports)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([exportName, doc]) => {
-          return renderExport(exportName, propertiesToOmit, doc)
+          return renderExport(exportName, doc, options)
         })
     })
     .join("\n\n")
@@ -65,8 +75,8 @@ export function markdownReferenceRenderer(
 
 function renderExport(
   exportName: string,
-  propertiesToOmit: Set<string>,
   doc: FileExportDocumentation,
+  options: Options,
   level = 1,
 ): string {
   if (level > 3) return ""
@@ -83,9 +93,9 @@ function renderExport(
   if (!content.length) return ""
   const propertiesContent = Object.entries(doc?.properties ?? {}).flatMap(
     ([propName, doc]) => {
-      if (propertiesToOmit.has(propName)) return []
+      if (options.propertiesToOmit.has(propName)) return []
       const nestedExportName = `${exportName}.${propName}`
-      return [renderExport(nestedExportName, propertiesToOmit, doc, level + 1)]
+      return [renderExport(nestedExportName, doc, options, level + 1)]
     },
   )
   const heading = `##${"#".repeat(level - 1)} \`${exportName}\``
