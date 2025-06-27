@@ -22,7 +22,7 @@ Hee doc, shee doc, we all doc but we need an output.
 ### CLI
 
 ```sh
-npx tsdoc-reference-md ./reference.md \
+npx markdown-reference ./reference.md \
   --entry src/builder/main-barrel.ts \
   # optional
   --watch \
@@ -33,3 +33,5 @@ npx tsdoc-reference-md ./reference.md \
 ```
 
 ### Programmatic
+
+### Custom renderers
