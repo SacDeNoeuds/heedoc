@@ -61,15 +61,26 @@ export function markdownReferenceRenderer(
   return markdown
 }
 
-function renderExport(exportName: string, doc: FileExportDocumentation): string {
-  return [
-        `## \`${exportName}\``,
-        doc.description,
-        doc.summary,
-        doc.remarks && `> [!NOTE]\n> ${doc.remarks}`,
-        // doc.type && ('```ts\n' + doc.type + '\n```'),
-        ...(doc.examples ?? []).map(({ title, code }) => {
-          return [title && `**${title}**`, code].join('\n')
-        })
-      ].filter(Boolean).join('\n\n')
+function renderExport(
+  exportName: string,
+  doc: FileExportDocumentation,
+  level = 1,
+): string {
+  if (level > 3) return ""
+  const content = [
+    doc.description,
+    doc.summary,
+    doc.remarks && `> [!NOTE]\n> ${doc.remarks}`,
+    // doc.type && ('```ts\n' + doc.type + '\n```'),
+    ...(doc.examples ?? []).map(({ title, code }) => {
+      return [title && `**${title}**`, code].join("\n")
+    }),
+  ].filter(Boolean)
+
+  if (!content.length) return ""
+  const propertiesContent = Object.entries(doc?.properties ?? {}).map(
+    ([propName, doc]) => renderExport(`${exportName}.${propName}`, doc, level + 1),
+  )
+  const heading = `##${"#".repeat(level - 1)} \`${exportName}\``
+  return [heading, ...content, ...propertiesContent].join("\n\n").trim()
 }

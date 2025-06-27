@@ -69,4 +69,41 @@ Timeout for all XHR requests
     `.trim(),
     )
   })
+
+  it("does not render properties when the export itself is not documented", () => {
+    const doc: FileDocumentation = {
+      fetchLove: {
+        properties: { timeout: { description: "Hello" } },
+      },
+    }
+    expect(() => markdownReferenceRenderer({ "samples/demo.ts": doc })).toThrow(
+      "No reference to generate, please check that your code has JSDoc",
+    )
+  })
+
+  it("renders properties when the export itself is documented", () => {
+    const doc: FileDocumentation = {
+      fetchLove: {
+        description: "Does what it does",
+        properties: {
+          timeout: {
+            description: "Time after which we stop searching for love",
+          },
+        },
+      },
+    }
+    const result = markdownReferenceRenderer({ "samples/demo.ts": doc })
+    expect(result).toBe(
+      `# Reference
+
+## \`fetchLove\`
+
+Does what it does
+
+### \`fetchLove.timeout\`
+
+Time after which we stop searching for love
+      `.trim(),
+    )
+  })
 })
