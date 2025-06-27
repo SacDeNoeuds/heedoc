@@ -1,7 +1,11 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { parseDocumentation, type FileDocumentation, type FileExportDocumentation } from './parser.js'
-import type { RenderDocumentation } from './render-documentation.js'
+import fs from "node:fs/promises"
+import path from "node:path"
+import {
+  parseDocumentation,
+  type FileDocumentation,
+  type FileExportDocumentation,
+} from "./parser.js"
+import type { RenderDocumentation } from "./render-documentation.js"
 
 export type RenderMarkdownReference = RenderDocumentation<{
   /**
@@ -23,22 +27,36 @@ export type RenderMarkdownReference = RenderDocumentation<{
    * })
    * ```
    */
-  resolveLinkPath?: (referencedName: string) => string | undefined;
+  resolveLinkPath?: (referencedName: string) => string | undefined
 }>
 
-export const renderMarkdownReference: RenderMarkdownReference = async ({ entryPoints, output }) => {
+export const renderMarkdownReference: RenderMarkdownReference = async ({
+  entryPoints,
+  output,
+}) => {
   const report = await parseDocumentation(entryPoints)
   const markdown = markdownReferenceRenderer(report)
   const outFile = path.resolve(process.cwd(), output)
-  await fs.writeFile(outFile, markdown, 'utf-8');
+  await fs.writeFile(outFile, markdown, "utf-8")
 }
 
-export function markdownReferenceRenderer(report: Record<string, FileDocumentation>): string {
-  const body = Object.values(report).flatMap((fileExports) => {
-    return Object.entries(fileExports).sort(([a], [b]) => a.localeCompare(b)).map(([exportName, doc]) => {
-      return renderExport(exportName, doc)
+export function markdownReferenceRenderer(
+  report: Record<string, FileDocumentation>,
+): string {
+  const body = Object.values(report)
+    .flatMap((fileExports) => {
+      return Object.entries(fileExports)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([exportName, doc]) => {
+          return renderExport(exportName, doc)
+        })
     })
-  }).join('\n\n')
+    .join("\n\n")
+    .trim()
+  if (!body)
+    throw new Error(
+      "No reference to generate, please check that your code has JSDoc",
+    )
   const markdown = `# Reference\n\n${body}`
   return markdown
 }
