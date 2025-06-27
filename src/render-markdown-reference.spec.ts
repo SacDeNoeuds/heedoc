@@ -81,6 +81,25 @@ Timeout for all XHR requests
     )
   })
 
+  it("does not render omitted properties", () => {
+    const doc: FileDocumentation = {
+      fetchLove: {
+        description: "toto",
+        properties: { timeout: { description: "Hello" } },
+      },
+    }
+    const propertiesToOmit = new Set(["timeout"])
+    const md = markdownReferenceRenderer({ "samples/demo.ts": doc }, propertiesToOmit)
+    expect(md).toBe(
+      `# Reference
+
+## \`fetchLove\`
+
+toto
+      `.trim(),
+    )
+  })
+
   it("renders properties when the export itself is documented", () => {
     const doc: FileDocumentation = {
       fetchLove: {

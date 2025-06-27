@@ -32,23 +32,25 @@ export type RenderMarkdownReference = RenderDocumentation<{
 
 export const renderMarkdownReference: RenderMarkdownReference = async ({
   entryPoints,
+  propertiesToOmit = new Set(),
   output,
 }) => {
   const report = await parseDocumentation(entryPoints)
-  const markdown = markdownReferenceRenderer(report)
+  const markdown = markdownReferenceRenderer(report, propertiesToOmit)
   const outFile = path.resolve(process.cwd(), output)
   await fs.writeFile(outFile, markdown, "utf-8")
 }
 
 export function markdownReferenceRenderer(
   report: Record<string, FileDocumentation>,
+  propertiesToOmit = new Set<string>(),
 ): string {
   const body = Object.values(report)
     .flatMap((fileExports) => {
       return Object.entries(fileExports)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([exportName, doc]) => {
-          return renderExport(exportName, doc)
+          return renderExport(exportName, propertiesToOmit, doc)
         })
     })
     .join("\n\n")
@@ -63,6 +65,7 @@ export function markdownReferenceRenderer(
 
 function renderExport(
   exportName: string,
+  propertiesToOmit: Set<string>,
   doc: FileExportDocumentation,
   level = 1,
 ): string {
@@ -78,8 +81,12 @@ function renderExport(
   ].filter(Boolean)
 
   if (!content.length) return ""
-  const propertiesContent = Object.entries(doc?.properties ?? {}).map(
-    ([propName, doc]) => renderExport(`${exportName}.${propName}`, doc, level + 1),
+  const propertiesContent = Object.entries(doc?.properties ?? {}).flatMap(
+    ([propName, doc]) => {
+      if (propertiesToOmit.has(propName)) return []
+      const nestedExportName = `${exportName}.${propName}`
+      return [renderExport(nestedExportName, propertiesToOmit, doc, level + 1)]
+    },
   )
   const heading = `##${"#".repeat(level - 1)} \`${exportName}\``
   return [heading, ...content, ...propertiesContent].join("\n\n").trim()
