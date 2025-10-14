@@ -1,31 +1,28 @@
 import { describe, expect, it } from "vitest"
-import type { FileDocumentation } from "./parser.js"
-import type { RenderDocumentationOptions } from "./render-documentation.js"
+import type { ExportDocumentation } from "./parser.js"
 import {
   markdownReferenceRenderer,
   type RenderMarkdownReferenceOptions,
 } from "./render-markdown-reference.js"
 
 describe(markdownReferenceRenderer.name, () => {
+  type ExportDocumentationByExportName = Record<string, ExportDocumentation>
   const render = (
-    doc: FileDocumentation,
-    options?: RenderMarkdownReferenceOptions &
-      Pick<RenderDocumentationOptions, "propertiesToOmit">,
+    documentationByExportName: ExportDocumentationByExportName,
+    options?: RenderMarkdownReferenceOptions,
   ) => {
     return markdownReferenceRenderer(
-      { "samples/demo.ts": doc },
+      new Map(Object.entries(documentationByExportName)),
       {
         mainHeading: "Reference",
-        propertiesToOmit: new Set(),
         startHeadingLevel: 2,
-        renames: {},
         ...options,
       },
     )
   }
 
   it("renders a fully documented variable", () => {
-    const doc: FileDocumentation = {
+    const doc: ExportDocumentationByExportName = {
       array: {
         description: "An array of numbers",
         type: "number[]",
@@ -67,7 +64,7 @@ console.log("Oops!")
   })
 
   it("chains and sorts alphabetically 2 exports", () => {
-    const doc: FileDocumentation = {
+    const doc: ExportDocumentationByExportName = {
       timeoutInMs: {
         description: "Timeout for all XHR requests",
       },
@@ -90,7 +87,7 @@ Timeout for all XHR requests
   })
 
   it("does not render properties when the export itself is not documented", () => {
-    const doc: FileDocumentation = {
+    const doc: ExportDocumentationByExportName = {
       fetchLove: {
         properties: { timeout: { description: "Hello" } },
       },
@@ -100,26 +97,8 @@ Timeout for all XHR requests
     )
   })
 
-  it("does not render omitted properties", () => {
-    const doc: FileDocumentation = {
-      fetchLove: {
-        description: "toto",
-        properties: { timeout: { description: "Hello" } },
-      },
-    }
-    const propertiesToOmit = new Set(["timeout"])
-    expect(render(doc, { propertiesToOmit })).toBe(
-      `# Reference
-
-## \`fetchLove\`
-
-toto
-      `.trim(),
-    )
-  })
-
   it("renders properties when the export itself is documented", () => {
-    const doc: FileDocumentation = {
+    const doc: ExportDocumentationByExportName = {
       fetchLove: {
         description: "Does what it does",
         properties: {
@@ -144,7 +123,7 @@ Time after which we stop searching for love
   })
 
   it('renders a doc starting at level 1', () => {
-    const doc: FileDocumentation = {
+    const doc: ExportDocumentationByExportName = {
       fetchLove: {
         description: "Does what it does",
         properties: {

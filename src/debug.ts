@@ -3,5 +3,5 @@ import { parseDocumentation } from './parser.js'
 
 const filePath = path.resolve(process.cwd(), "./samples/barrel.ts")
 
-parseDocumentation({ [filePath]: "all exports" }).then(
+parseDocumentation({ [filePath]: { exports: "all" } }).then(
   (result) => console.dir(result, { depth: null }), console.error)
