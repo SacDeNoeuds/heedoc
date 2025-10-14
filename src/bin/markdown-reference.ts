@@ -67,16 +67,16 @@ cli
       : undefined
 
     const fileExports: FileExports = exportsToPick
-      ? { type: "pick", exports: exportsToPick }
+      ? { type: "pick", names: exportsToPick }
       : exportsToOmit
-      ? { type: "omit", exports: exportsToOmit }
-      : "all exports"
+      ? { type: "omit", names: exportsToOmit }
+      : "all"
 
     const entryPoints: RenderDocumentationOptions["entryPoints"] =
       Object.assign(
         {},
-        ...entryPointsFromOptions.map((entryPoint) => ({
-          [entryPoint]: fileExports,
+        ...entryPointsFromOptions.map((entryPoint): RenderDocumentationOptions['entryPoints'] => ({
+          [entryPoint]: { exports: fileExports },
         })),
       )
     try {

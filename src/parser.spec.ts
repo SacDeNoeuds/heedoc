@@ -2,11 +2,11 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 import { parseDocumentation } from "./parser.js"
 
-const barrelFilePath = path.resolve(process.cwd(), "./samples/barrel.ts")
-const sourceFilePath = path.resolve(process.cwd(), "./samples/schema.ts")
-const interfaceFilePath = path.resolve(process.cwd(), "./samples/interface.ts")
-const fnFilePath = path.resolve(process.cwd(), "./samples/fn.ts")
-const proxyTypeFilePath = path.resolve(process.cwd(), "./samples/proxy-type.ts")
+const barrelFilePath = path.relative(process.cwd(), "./samples/barrel.ts")
+const sourceFilePath = path.relative(process.cwd(), "./samples/schema.ts")
+const interfaceFilePath = path.relative(process.cwd(), "./samples/interface.ts")
+const fnFilePath = path.relative(process.cwd(), "./samples/fn.ts")
+const proxyTypeFilePath = path.relative(process.cwd(), "./samples/proxy-type.ts")
 
 const stringSuccessExample = `
 import { string, success } from './schema'
@@ -42,8 +42,12 @@ describe(parseDocumentation.name, () => {
   } as const
 
   it("parses all the exports of the source file", async () => {
-    const result = await parseDocumentation({ [sourceFilePath]: "all exports" })
-    expect(result).toEqual({
+    const result = await parseDocumentation({
+      [sourceFilePath]: {
+        exports: "all",
+      },
+    })
+    expect(MapToRecord(result)).toEqual({
       "samples/schema.ts": {
         Schema: { type: expect.any(String) },
         SchemaError: { type: expect.any(String) },
@@ -55,21 +59,25 @@ describe(parseDocumentation.name, () => {
   })
 
   it("parses all the exports of the barrel file", async () => {
-    const result = await parseDocumentation({ [barrelFilePath]: "all exports" })
-    expect(result).toEqual({
+    const result = await parseDocumentation({
+      [barrelFilePath]: { exports: "all" },
+    })
+    expect(MapToRecord(result)).toEqual({
       "samples/barrel.ts": {
         success: expectedSuccessData,
         failure: expectedFailureData,
         string: expectedStringData,
-      },
+      }
     })
   })
 
   it("parses only the `string` export documentation of the source file", async () => {
     const result = await parseDocumentation({
-      [sourceFilePath]: { type: "pick", exports: ["string"] },
+      [sourceFilePath]: {
+        exports: { type: "pick", names: ["string"] },
+      },
     })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/schema.ts": {
         string: expectedStringData,
       },
@@ -78,18 +86,22 @@ describe(parseDocumentation.name, () => {
 
   it("parses only the `string` picked export documentation of a barrel file", async () => {
     const result = await parseDocumentation({
-      [barrelFilePath]: { type: "pick", exports: ["string"] },
+      [barrelFilePath]: {
+        exports: { type: "pick", names: ["string"] },
+      },
     })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/barrel.ts": { string: expectedStringData },
     })
   })
 
   it("parses only the `string` by omitting all others export documentation of a barrel file", async () => {
     const result = await parseDocumentation({
-      [barrelFilePath]: { type: "omit", exports: ["success", "failure"] },
+      [barrelFilePath]: {
+        exports: { type: "omit", names: ["success", "failure"] },
+      },
     })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/barrel.ts": { string: expectedStringData },
     })
   })
@@ -99,9 +111,11 @@ describe(parseDocumentation.name, () => {
     ["a type", "SchemaError1"],
   ])("parses properties of %s", async (_, exportName) => {
     const result = await parseDocumentation({
-      [interfaceFilePath]: { type: "pick", exports: [exportName] },
+      [interfaceFilePath]: {
+        exports: { type: "pick", names: [exportName] },
+      },
     })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/interface.ts": {
         [exportName]: {
           type: exportName,
@@ -126,9 +140,9 @@ describe(parseDocumentation.name, () => {
 
   it("parses a function with an assigned property", async () => {
     const result = await parseDocumentation({
-      [fnFilePath]: "all exports",
+      [fnFilePath]: { exports: "all" },
     })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/fn.ts": {
         myFn: {
           properties: {
@@ -143,10 +157,11 @@ describe(parseDocumentation.name, () => {
 
   it("parses a proxy type with nested conditions", async () => {
     const result = await parseDocumentation({
-      [proxyTypeFilePath]: { type: "pick", exports: ["Proxy"] },
+      [proxyTypeFilePath]: {
+        exports: { type: "pick", names: ["Proxy"] },
+      },
     })
-    console.dir(result, { depth: null })
-    expect(result).toEqual({
+    expect(MapToRecord(result)).toEqual({
       "samples/proxy-type.ts": {
         Proxy: {
           type: "Proxy<T>",
@@ -164,3 +179,14 @@ describe(parseDocumentation.name, () => {
     })
   })
 })
+
+function MapToRecord(filesDocumentation: Awaited<ReturnType<typeof parseDocumentation>>) {
+  const acc = {} as any
+  filesDocumentation.forEach((fileDocumentation, filePath) => {
+    acc[filePath] = {}
+    fileDocumentation.forEach((fileExportDocumentation, exportName) => {
+      acc[filePath][exportName] = fileExportDocumentation
+    })
+  })
+  return acc
+}

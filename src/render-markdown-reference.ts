@@ -1,12 +1,12 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import {
-  parseDocumentation,
-  type FileDocumentation,
-  type FileExportDocumentation,
-} from "./parser.js"
-import { prettify } from './prettify.js'
-import type { RenderDocumentation, RenderDocumentationOptions } from "./render-documentation.js"
+  groupDocumentationByExportName,
+  type DocumentationByExportName,
+} from "./group-by-export-name.js"
+import { parseDocumentation, type ExportDocumentation } from "./parser.js"
+import { prettify } from "./prettify.js"
+import type { RenderDocumentation } from "./render-documentation.js"
 
 export type RenderMarkdownReferenceOptions = {
   // /**
@@ -35,34 +35,46 @@ export type RenderMarkdownReferenceOptions = {
    */
   startHeadingLevel?: number
 }
-export type RenderMarkdownReference = RenderDocumentation<RenderMarkdownReferenceOptions>
+export type RenderMarkdownReference =
+  RenderDocumentation<RenderMarkdownReferenceOptions>
 
 export const renderMarkdownReference: RenderMarkdownReference = async ({
   entryPoints,
   output,
-  mainHeading = '',
+  mainHeading = "",
   startHeadingLevel = 2,
-  renames = {},
-  propertiesToOmit = new Set(),
 }) => {
-  const report = await parseDocumentation(entryPoints)
-  const markdown = markdownReferenceRenderer(report, { propertiesToOmit, mainHeading, startHeadingLevel, renames })
+  entryPoints = Object.fromEntries(
+    Object.entries(entryPoints).map(([filePath, config]) => {
+      const relativePath = path.relative(process.cwd(), filePath)
+      return [relativePath, config]
+    }),
+  )
+
+  const documentationByExportNameByFilePath =
+    await parseDocumentation(entryPoints)
+  const documentationByExportName = groupDocumentationByExportName(
+    documentationByExportNameByFilePath,
+    entryPoints,
+  )
+  const markdown = markdownReferenceRenderer(documentationByExportName, {
+    mainHeading,
+    startHeadingLevel,
+  })
   const outFile = path.resolve(process.cwd(), output)
   await fs.writeFile(outFile, await prettify(markdown), "utf-8")
 }
 
-type Options = Required<RenderMarkdownReferenceOptions & Pick<RenderDocumentationOptions, 'propertiesToOmit' | 'renames'>>
+type Options = Required<RenderMarkdownReferenceOptions>
 
 export function markdownReferenceRenderer(
-  report: Record<string, FileDocumentation>,
+  documentationByExportName: DocumentationByExportName,
   options: Options,
 ): string {
-  const body = Object.values(report)
-    .flatMap((fileExports) => {
-      return Object.entries(fileExports)
-        .map(([name, doc]) => [options.renames[name] ?? name, doc] as const)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([exportName, doc]) => renderExport(exportName, doc, options))
+  const body = [...documentationByExportName.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([exportName, documentation]) => {
+      return renderExport(exportName, documentation, options)
     })
     .join("\n\n")
     .trim()
@@ -70,16 +82,15 @@ export function markdownReferenceRenderer(
     throw new Error(
       "No reference to generate, please check that your code has JSDoc",
     )
-  const markdown = [
-    options.mainHeading && `# ${options.mainHeading}`,
-    body,
-  ].filter(Boolean).join('\n\n')
+  const markdown = [options.mainHeading && `# ${options.mainHeading}`, body]
+    .filter(Boolean)
+    .join("\n\n")
   return markdown
 }
 
 function renderExport(
   exportName: string,
-  doc: FileExportDocumentation,
+  doc: ExportDocumentation,
   options: Options,
   level = 1,
 ): string {
@@ -96,15 +107,12 @@ function renderExport(
 
   if (!content.length) return ""
   const propertiesContent = Object.entries(doc?.properties ?? {})
-    .filter(([propName]) => !options.propertiesToOmit.has(propName))
-    .map(([propName, doc]) => [options.renames[propName] ?? propName, doc] as const)
-    .sort(([a], [b]) => a.localeCompare(b)).flatMap(
-    ([propName, doc]) => {
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([propName, doc]) => {
       const nestedExportName = `${exportName}.${propName}`
-      return [renderExport(nestedExportName, doc, options, level + 1)]
-    },
-  )
-  const headingLevel = level - 1 + options.startHeadingLevel;
+      return renderExport(nestedExportName, doc, options, level + 1)
+    })
+  const headingLevel = level - 1 + options.startHeadingLevel
   const heading = `${"#".repeat(headingLevel)} \`${exportName}\``
   return [heading, ...content, ...propertiesContent].join("\n\n").trim()
 }

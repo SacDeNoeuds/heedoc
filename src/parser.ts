@@ -1,4 +1,3 @@
-import path from "node:path"
 import {
   type ExportedDeclarations,
   JSDoc,
@@ -13,33 +12,54 @@ import {
   TypeNode,
 } from "ts-morph"
 
-export interface FileExportDocumentation {
-  examples?: Array<{ title?: string; code: string }>
+type FileExportExample = {
+  title?: string
+  code: string
+}
+
+export interface ExportDocumentation {
+  examples?: Array<FileExportExample>
   remarks?: string
   summary?: string
   description?: string
   type?: string
   category?: string
-  properties?: Record<string, FileExportDocumentation>
+  properties?: Record<string, ExportDocumentation>
 }
 type ExportName = string
-export type FileDocumentation = Record<ExportName, FileExportDocumentation>
+export type FileDocumentation = Map<ExportName, ExportDocumentation>
 
 type FilePath = string
+
+export type FileDocumentationConfig<RenamedExports extends string = string> = {
+  readonly exports: FileExports
+  readonly propertiesToOmit?: Set<string>
+  readonly renames?: Record<RenamedExports, string>
+  readonly mapExample?: Record<RenamedExports, DocumentationExampleMapper>
+}
+
+export type DocumentationExampleMapper = (
+  example: FileExportExample,
+  property: string | undefined,
+) => FileExportExample | undefined
+
 export type FileExports =
-  | "all exports"
-  | { type: "omit" | "pick"; exports: string[] }
+  | "all"
+  | { readonly type: "omit" | "pick"; readonly names: readonly string[] }
 
 export async function parseDocumentation(
-  filesToParse: Record<FilePath, FileExports>,
-): Promise<Record<FilePath, FileDocumentation>> {
-  const acc: Record<FilePath, FileDocumentation> = {}
+  filesToParse: Record<FilePath, FileDocumentationConfig>,
+): Promise<Map<FilePath, FileDocumentation>> {
+  const acc = new Map<FilePath, FileDocumentation>()
   const project = new Project()
-  for (const filePath in filesToParse) {
-    const relativePath = path.relative(process.cwd(), filePath)
-    const exports = filesToParse[filePath]!
-    project.addSourceFilesAtPaths(filePath)
-    acc[relativePath] = await parseFileDocumentation(project, filePath, exports)
+
+  for (const [relativePath, documentationConfig] of Object.entries(filesToParse)) {
+    if (!documentationConfig) continue
+    project.addSourceFilesAtPaths(relativePath)
+    acc.set(
+      relativePath,
+      await parseFileDocumentation(project, relativePath, documentationConfig),
+    )
   }
   return acc
 }
@@ -47,21 +67,30 @@ export async function parseDocumentation(
 async function parseFileDocumentation(
   project: Project,
   filePath: FilePath,
-  exports: FileExports,
+  fileDocumentationConfig: FileDocumentationConfig,
 ): Promise<FileDocumentation> {
   const sourceFile = project.getSourceFileOrThrow(filePath)
-  const fileDoc: FileDocumentation = {}
-  for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
-    if (!isExportToDocument(name, exports)) continue
-    fileDoc[name] = parseDeclarationDocumentation(declarations[0]!)
+  const fileDocumentation: FileDocumentation = new Map()
+
+  for (const [
+    exportName,
+    declarations,
+  ] of sourceFile.getExportedDeclarations()) {
+    if (!isExportToDocument(exportName, fileDocumentationConfig.exports))
+      continue
+    const fileExportDocumentation = parseDeclarationDocumentation(
+      declarations[0]!,
+    )
+    fileDocumentation.set(exportName, fileExportDocumentation)
   }
-  return fileDoc
+  return fileDocumentation
 }
-function isExportToDocument(name: string, exportsToDoc: FileExports) {
-  if (exportsToDoc === "all exports") return true
-  return exportsToDoc.type === "omit"
-    ? !exportsToDoc.exports.includes(name)
-    : exportsToDoc.exports.includes(name)
+
+function isExportToDocument(name: string, exportsToDocument: FileExports) {
+  if (exportsToDocument === "all") return true
+  return exportsToDocument.type === "omit"
+    ? !exportsToDocument.names.includes(name)
+    : exportsToDocument.names.includes(name)
 }
 
 function isJSDocableNode(node: Record<string, any>): node is JSDocableNode {
@@ -118,21 +147,24 @@ function resolveConditionTypeNodes(
 
 function getJsDocsOfChildren(
   node: ExportedDeclarations,
-): Record<string, FileExportDocumentation> | undefined {
+): Record<string, ExportDocumentation> | undefined {
   if (node instanceof TypeAliasDeclaration) {
     const allTypeNodes = resolveConditionTypeNodes(node.getTypeNodeOrThrow())
     // console.debug("so?", allTypeNodes.map((node) => node.getText()))
-    return allTypeNodes.reduce((acc, typeNode) => {
-      return extractTypeJsDocs(typeNode.getType(), acc)
-    }, undefined as Record<string, FileExportDocumentation> | undefined)
+    return allTypeNodes.reduce(
+      (acc, typeNode) => {
+        return extractTypeJsDocs(typeNode.getType(), acc)
+      },
+      undefined as Record<string, ExportDocumentation> | undefined,
+    )
   }
   return extractTypeJsDocs(node.getType())
 }
 
 function extractTypeJsDocs(
   type: Type,
-  acc: Record<string, FileExportDocumentation> | undefined = undefined,
-): Record<string, FileExportDocumentation> | undefined {
+  acc: Record<string, ExportDocumentation> | undefined = undefined,
+): Record<string, ExportDocumentation> | undefined {
   if (type.isArray()) {
     const elementType = type.getArrayElementTypeOrThrow()
     return extractTypeJsDocs(elementType, acc)
@@ -187,7 +219,7 @@ function getDeclarationType(declaration: ExportedDeclarations) {
 
 function parseDeclarationDocumentation(
   declaration: ExportedDeclarations,
-): FileExportDocumentation {
+): ExportDocumentation {
   const [jsDoc] = getJsDocsUntilParent(declaration, 3)
   return {
     type: getDeclarationType(declaration),
@@ -196,11 +228,11 @@ function parseDeclarationDocumentation(
   }
 }
 
-function jsDocToFileExportDocumentation(jsDoc: JSDoc): FileExportDocumentation {
-  const initialDoc: FileExportDocumentation = {
+function jsDocToFileExportDocumentation(jsDoc: JSDoc): ExportDocumentation {
+  const initialDoc: ExportDocumentation = {
     description: jsDoc?.getDescription().trim() || undefined,
   }
-  return jsDoc.getTags().reduce((acc, tag): FileExportDocumentation => {
+  return jsDoc.getTags().reduce((acc, tag): ExportDocumentation => {
     switch (tag.getTagName()) {
       case "example": {
         const text = tag.getCommentText()!.trim()
