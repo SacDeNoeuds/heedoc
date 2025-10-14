@@ -7,6 +7,10 @@ const sourceFilePath = path.relative(process.cwd(), "./samples/schema.ts")
 const interfaceFilePath = path.relative(process.cwd(), "./samples/interface.ts")
 const fnFilePath = path.relative(process.cwd(), "./samples/fn.ts")
 const proxyTypeFilePath = path.relative(process.cwd(), "./samples/proxy-type.ts")
+const interfaceMethodOverloadingFilePath = path.relative(
+  process.cwd(),
+  "./samples/interface-method-overloading.ts",
+)
 
 const stringSuccessExample = `
 import { string, success } from './schema'
@@ -172,6 +176,31 @@ describe(parseDocumentation.name, () => {
             },
             propOfB: {
               description: "B is the way to go",
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it("parses an interface with function overloading", async () => {
+    const result = await parseDocumentation({
+      [interfaceMethodOverloadingFilePath]: {
+        exports: {
+          type: "pick",
+          names: ["Typed"],
+        }
+      },
+    })
+    expect(MapToRecord(result)).toEqual({
+      "samples/interface-method-overloading.ts": {
+        Typed: {
+          type: "Typed",
+          properties: {
+            object: {
+              category: "Reference",
+              description: "Hi !",
+              examples: expect.any(Array),
             },
           },
         },

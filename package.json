@@ -16,6 +16,7 @@
     "build": "tsc",
     "postbuild": "chmod +x ./dist/bin/*",
     "prepack": "npm run build",
+    "test-bin": "tsx ./src/bin/markdown-reference.ts",
     "test": "vitest"
   },
   "keywords": [
